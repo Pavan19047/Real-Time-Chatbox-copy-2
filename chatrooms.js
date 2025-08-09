@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore, collection, doc, getDocs, getDoc, query, where, orderBy, limit, setDoc, onSnapshot, updateDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, collection, doc, getDocs, getDoc, query, where, orderBy, limit, setDoc, onSnapshot, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 // --- Firebase Config ---
 const firebaseConfig = {
@@ -20,6 +20,7 @@ const db = getFirestore(app);
 // --- DOM References ---
 const chatroomListEl = document.getElementById('chatroom-list');
 const searchBar = document.getElementById('search-bar');
+const createRoomBtn = document.getElementById('create-room-btn');
 let currentUser;
 
 // --- Authentication ---
@@ -33,13 +34,8 @@ onAuthStateChanged(auth, user => {
     }
 });
 
-// Add this to your DOM References at the top
-const createRoomBtn = document.getElementById('create-room-btn');
+createRoomBtn.addEventListener('click', createNewChatroom);
 
-// Add this new function anywhere in your file
-/**
- * Creates a new chatroom document in Firestore.
- */
 async function createNewChatroom() {
     const roomTitle = prompt("Please enter a name for the new chatroom:");
 
@@ -48,9 +44,8 @@ async function createNewChatroom() {
             const roomsRef = collection(db, 'chatrooms');
             await addDoc(roomsRef, {
                 title: roomTitle,
-                createdAt: serverTimestamp() // Good practice to add a creation time
+                createdAt: serverTimestamp()
             });
-            // Reload the list to show the new room
             loadChatrooms();
         } catch (error) {
             console.error("Error creating new chatroom:", error);
@@ -61,16 +56,12 @@ async function createNewChatroom() {
     }
 }
 
-// Add this event listener at the end of your file
-createRoomBtn.addEventListener('click', createNewChatroom);
-
-// --- Main Data Loading Function ---
 async function loadChatrooms() {
     if (!currentUser) return;
     try {
         const roomsRef = collection(db, 'chatrooms');
         const roomsSnapshot = await getDocs(roomsRef);
-        
+
         const promises = roomsSnapshot.docs.map(async (roomDoc) => {
             const room = { id: roomDoc.id, ...roomDoc.data() };
             const lastMessage = await getLastMessage(room.id);
@@ -94,13 +85,18 @@ async function loadChatrooms() {
     }
 }
 
-// --- Helper Functions ---
-
 async function getLastMessage(roomId) {
     const messagesRef = collection(db, 'chatrooms', roomId, 'messages');
     const q = query(messagesRef, orderBy('timestamp', 'desc'), limit(1));
     const snapshot = await getDocs(q);
-    return snapshot.empty ? { text: 'No messages yet...', timestamp: null } : snapshot.docs[0].data();
+    if (snapshot.empty) {
+        return { text: 'No messages yet...', timestamp: null };
+    }
+    const lastMessageData = snapshot.docs[0].data();
+    if (lastMessageData.imageUrl && !lastMessageData.text) {
+        return { text: '📷 Image', timestamp: lastMessageData.timestamp };
+    }
+    return lastMessageData;
 }
 
 async function getUnreadCount(roomId, userId) {
@@ -142,8 +138,6 @@ function createRoomElement(room, lastMessage, unreadCount) {
     return roomElement;
 }
 
-// --- Mute, Pin, and Swipe Logic ---
-
 async function toggleMute(roomId, button) {
     if (!currentUser) return;
     const muteRef = doc(db, 'mutes', currentUser.uid, 'rooms', roomId);
@@ -155,7 +149,6 @@ async function toggleMute(roomId, button) {
         console.error("Error updating mute status:", error);
     }
 }
-
 
 function updateMuteButtonUI(button, isMuted) {
     button.textContent = isMuted ? 'Unmute' : 'Mute';
@@ -190,14 +183,12 @@ function addSwipeToMute(element) {
     element.addEventListener('mouseleave', () => clearTimeout(longPressTimeout));
 }
 
-// --- Event Delegation for Buttons ---
 chatroomListEl.addEventListener('click', (e) => {
     if (e.target.classList.contains('mute-button')) {
         toggleMute(e.target.dataset.roomId, e.target);
     }
 });
 
-// --- Search Bar ---
 searchBar.addEventListener('keyup', (e) => {
     const term = e.target.value.toLowerCase();
     const rooms = chatroomListEl.getElementsByClassName('chatroom-item');

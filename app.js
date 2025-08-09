@@ -14,33 +14,31 @@ import {
   orderBy,
   doc,
   setDoc,
-  updateDoc,
-  getDocs,
-  getDoc
+  updateDoc
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js'
-// Add these new imports for Firebase Storage
 import {
   getStorage,
   ref,
-  uploadBytes,
+  uploadBytesResumable,
   getDownloadURL
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js'
 
 // --- Firebase Config ---
+// --- Firebase Config ---
 const firebaseConfig = {
-  apiKey: 'AIzaSyDEpEbOdl7ysRoYZBj3phVcfA5wxE6W37c',
-  authDomain: 'real-time-chatbot-372f7.firebaseapp.com',
-  projectId: 'real-time-chatbot-372f7',
-  storageBucket: 'real-time-chatbot-372f7.appspot.com',
-  messagingSenderId: '88476999060',
-  appId: '1:88476999060:web:ec54d7298b84333d274381'
-}
+    apiKey: "AIzaSyDEpEbOdl7ysRoYZBj3phVcfA5wxE6W37c",
+    authDomain: "real-time-chatbot-372f7.firebaseapp.com",
+    projectId: "real-time-chatbot-372f7",
+    storageBucket: "real-time-chatbot-372f7.firebasestorage.app", // <-- This is the corrected line
+    messagingSenderId: "88476999060",
+    appId: "1:88476g999060:web:ec54d7298b84333d274381",
+};
 
 // --- Initialize Firebase ---
 const app = initializeApp(firebaseConfig)
 const auth = getAuth(app)
 const db = getFirestore(app)
-const storage = getStorage(app) // Initialize Storage
+const storage = getStorage(app)
 
 // --- DOM References ---
 const sendButton = document.querySelector('.send-button')
@@ -50,48 +48,41 @@ const roomTitleEl = document.querySelector('.room-title')
 const backButton = document.querySelector('.back-button')
 const attachFileButton = document.getElementById('attach-file-button')
 const imageUploadInput = document.getElementById('image-upload-input')
+const imagePreviewContainer = document.getElementById('image-preview-container')
+const imagePreview = document.getElementById('image-preview')
+const removeImageBtn = document.getElementById('remove-image-btn')
 
-// Typing indicator state
 let typingTimeout = null
 let isTyping = false
-
-// --- Get Room ID and Title from URL ---
 const urlParams = new URLSearchParams(window.location.search)
 const roomId = urlParams.get('roomId')
 const roomTitle = urlParams.get('title')
-
-// --- Global State ---
 let currentUser = null
 let lastMessageDate = null
+let selectedImageFile = null
 
-// --- Initial Setup ---
 if (!roomId || !roomTitle) {
-  // Redirect if no room is specified
   window.location.href = 'chatrooms.html'
 } else {
   roomTitleEl.textContent = roomTitle
 }
 
-// --- Back Button Functionality ---
 backButton.addEventListener('click', () => {
   window.location.href = 'chatrooms.html'
 })
 
-// --- Authentication ---
 onAuthStateChanged(auth, user => {
   if (user) {
     currentUser = user
     sendButton.disabled = false
-    listenForMessages(roomId) // Use the dynamic roomId
+    listenForMessages(roomId)
   } else {
     signInAnonymously(auth).catch(err => console.error(err))
   }
 })
 
-// --- Event Listeners for Sending Messages ---
 sendButton.addEventListener('click', sendMessage)
 messageInput.addEventListener('keydown', event => {
-  // Typing indicator logic
   if (!isTyping) {
     setTypingStatus(true)
     isTyping = true
@@ -108,15 +99,11 @@ messageInput.addEventListener('keydown', event => {
   }
 })
 
-// On blur, clear typing status
 messageInput.addEventListener('blur', () => {
   setTypingStatus(false)
   isTyping = false
 })
 
-/**
- * Sends a message to the current chat room.
- */
 async function sendMessage () {
   const text = messageInput.value.trim()
   if ((text === '' && !selectedImageFile) || !currentUser) return
@@ -130,7 +117,7 @@ async function sendMessage () {
       imageUrl = await uploadImage(selectedImageFile)
     }
     const messagesRef = collection(db, 'chatrooms', roomId, 'messages')
-    const docRef = await addDoc(messagesRef, {
+    await addDoc(messagesRef, {
       senderId: currentUser.uid,
       text: text,
       imageUrl: imageUrl,
@@ -141,7 +128,6 @@ async function sendMessage () {
     messageInput.value = ''
     setTypingStatus(false)
     isTyping = false
-    // Reset image preview
     selectedImageFile = null
     imagePreview.src = ''
     imagePreviewContainer.style.display = 'none'
@@ -154,13 +140,9 @@ async function sendMessage () {
   }
 }
 
-/**
- * Listens for real-time messages in the current room.
- */
 function listenForMessages (currentRoomId) {
   const messagesRef = collection(db, 'chatrooms', currentRoomId, 'messages')
   const q = query(messagesRef, orderBy('timestamp'))
-
   let lastSnapshot = null
 
   async function markAllUnseenAsSeen (snapshot, myUid) {
@@ -185,10 +167,7 @@ function listenForMessages (currentRoomId) {
   onSnapshot(q, async snapshot => {
     chatArea.innerHTML = ''
     lastMessageDate = null
-
-    // Remove typing indicator if present
     removeTypingIndicator()
-
     let myUid = currentUser?.uid
     lastSnapshot = snapshot
 
@@ -197,7 +176,6 @@ function listenForMessages (currentRoomId) {
       const isSent = message.senderId === myUid
       displayMessage(message, isSent, myUid)
 
-      // If received and not delivered, update deliveredTo
       if (
         !isSent &&
         message.deliveredTo &&
@@ -216,7 +194,6 @@ function listenForMessages (currentRoomId) {
       }
     }
 
-    // Mark all unseen as seen if window is focused
     if (document.hasFocus()) {
       await markAllUnseenAsSeen(snapshot, myUid)
     }
@@ -227,10 +204,8 @@ function listenForMessages (currentRoomId) {
     chatArea.scrollTop = chatArea.scrollHeight
   })
 
-  // Listen for typing status
   listenForTyping(currentRoomId)
 
-  // Listen for window focus to update seen status immediately
   window.addEventListener('focus', async () => {
     if (lastSnapshot && currentUser) {
       await markAllUnseenAsSeen(lastSnapshot, currentUser.uid)
@@ -238,9 +213,6 @@ function listenForMessages (currentRoomId) {
   })
 }
 
-/**
- * Updates the user's last read timestamp for the room.
- */
 function markAsRead (userId, currentRoomId) {
   const readStatusRef = doc(db, 'reads', userId, 'rooms', currentRoomId)
   setDoc(
@@ -249,8 +221,6 @@ function markAsRead (userId, currentRoomId) {
     { merge: true }
   )
 }
-
-// (The createAndDisplayDateSeparator, and formatDateSeparator functions remain the same)
 
 function displayMessage (message, isSent, myUid) {
   const messageDate =
@@ -269,18 +239,12 @@ function displayMessage (message, isSent, myUid) {
   const messageBubble = document.createElement('div')
   messageBubble.classList.add('message-bubble', isSent ? 'sent' : 'received')
 
-  // If imageUrl is present, show image preview
   if (message.imageUrl) {
     const imageDiv = document.createElement('div')
     imageDiv.classList.add('message-image')
     const img = document.createElement('img')
     img.src = message.imageUrl
     img.alt = 'Image'
-    img.style.maxWidth = '180px'
-    img.style.maxHeight = '180px'
-    img.style.borderRadius = '8px'
-    img.style.display = 'block'
-    img.style.marginBottom = '4px'
     imageDiv.appendChild(img)
     messageBubble.appendChild(imageDiv)
   }
@@ -300,11 +264,9 @@ function displayMessage (message, isSent, myUid) {
     hour12: true
   })
 
-  // --- Read Receipt Logic ---
   if (isSent) {
     const readReceipts = document.createElement('span')
     readReceipts.classList.add('read-receipts')
-    // WhatsApp style: ✓ = sent, ✓✓ = delivered, ✓✓ (blue) = seen
     let deliveredCount = (message.deliveredTo || []).filter(
       uid => uid !== myUid
     ).length
@@ -324,7 +286,6 @@ function displayMessage (message, isSent, myUid) {
   chatArea.appendChild(messageBubble)
 }
 
-// --- Typing Indicator ---
 function setTypingStatus (isTyping) {
   if (!currentUser) return
   const typingRef = doc(db, 'chatrooms', roomId, 'typing', currentUser.uid)
@@ -391,28 +352,6 @@ function formatDateSeparator (date) {
   }
 }
 
-// --- Image Preview and Upload State ---
-
-const imagePreviewContainer = document.getElementById('image-preview-container')
-const imagePreview = document.getElementById('image-preview')
-const removeImageBtn = document.getElementById('remove-image-btn')
-let selectedImageFile = null
-
-// --- Upload Progress Bar ---
-let uploadProgressBar = document.getElementById('upload-progress-bar')
-if (!uploadProgressBar) {
-  uploadProgressBar = document.createElement('progress')
-  uploadProgressBar.id = 'upload-progress-bar'
-  uploadProgressBar.max = 100
-  uploadProgressBar.value = 0
-  uploadProgressBar.style.display = 'none'
-  uploadProgressBar.style.width = '100%'
-  imagePreviewContainer.parentNode.insertBefore(
-    uploadProgressBar,
-    imagePreviewContainer.nextSibling
-  )
-}
-
 attachFileButton.addEventListener('click', () => {
   imageUploadInput.value = ''
   imageUploadInput.click()
@@ -440,76 +379,34 @@ removeImageBtn.addEventListener('click', () => {
   imagePreviewContainer.style.display = 'none'
 })
 
-/**
- * Uploads a file to Firebase Storage and returns the download URL.
- */
-async function uploadImage (file) {
-  const uniqueFileName = `${Date.now()}-${file.name}`
+async function uploadImage(file) {
+  const uniqueFileName = `${Date.now()}-${file.name}`;
   const storageRef = ref(
     storage,
     `chatrooms/${roomId}/images/${uniqueFileName}`
-  )
+  );
 
-  // Show progress bar
-  uploadProgressBar.value = 0
-  uploadProgressBar.style.display = 'block'
+  const uploadTask = uploadBytesResumable(storageRef, file);
 
-  // Use XMLHttpRequest for progress (since uploadBytes doesn't support progress natively)
-  // Convert file to Blob and upload via XHR
-  const url = `https://firebasestorage.googleapis.com/v0/b/${
-    storage.app.options.storageBucket
-  }/o/chatrooms%2F${roomId}%2Fimages%2F${encodeURIComponent(uniqueFileName)}`
   return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest()
-    xhr.open(
-      'POST',
-      url +
-        '?uploadType=media&name=chatrooms/' +
-        roomId +
-        '/images/' +
-        uniqueFileName
-    )
-    xhr.setRequestHeader('Authorization', 'Bearer ')
-    xhr.upload.onprogress = function (e) {
-      if (e.lengthComputable) {
-        uploadProgressBar.value = Math.round((e.loaded / e.total) * 100)
+    uploadTask.on(
+      'state_changed',
+      (snapshot) => {
+        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        console.log('Upload is ' + progress + '% done');
+      },
+      (error) => {
+        // Handle unsuccessful uploads
+        console.error("Upload failed:", error);
+        reject(error);
+      },
+      () => {
+        // Handle successful uploads on complete
+        getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+          console.log('File available at', downloadURL);
+          resolve(downloadURL);
+        });
       }
-    }
-    xhr.onload = async function () {
-      uploadProgressBar.style.display = 'none'
-      if (xhr.status === 200) {
-        // Now get the download URL from Firebase Storage
-        try {
-          const downloadURL = await getDownloadURL(storageRef)
-          resolve(downloadURL)
-        } catch (err) {
-          reject(err)
-        }
-      } else {
-        reject(new Error('Upload failed'))
-      }
-    }
-    xhr.onerror = function () {
-      uploadProgressBar.style.display = 'none'
-      reject(new Error('Upload failed'))
-    }
-    xhr.send(file)
-  })
-}
-
-/**
- * Sends a new message containing only an image URL.
- */
-async function sendImageMessage (imageUrl) {
-  try {
-    const messagesRef = collection(db, 'chatrooms', roomId, 'messages')
-    await addDoc(messagesRef, {
-      senderId: currentUser.uid,
-      imageUrl: imageUrl, // The message now contains an imageUrl
-      text: '', // Text is empty for image messages
-      timestamp: serverTimestamp()
-    })
-  } catch (error) {
-    console.error('Error sending image message:', error)
-  }
+    );
+  });
 }

@@ -18,7 +18,7 @@ body {
     flex-direction: column;
     background: rgba(255, 255, 255, 0.25);
     backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px); 
+    -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(255, 255, 255, 0.4);
     border-radius: 16px;
     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.15);
@@ -59,7 +59,8 @@ body {
     flex-grow: 1;
     padding: 16px;
     overflow-y: auto;
-    background-image: #fff5e6;
+    background-image: url('./images/whatsapp.jpeg');
+    background-size: contain;
 }
 
 /* Message Bubbles */
@@ -71,9 +72,21 @@ body {
     clear: both;
 }
 
+.message-image {
+    max-width: 100%;
+    border-radius: 15px;
+    cursor: pointer;
+    margin-bottom: 5px;
+}
+
+.message-image img {
+    max-width: 250px;
+    border-radius: 15px;
+}
+
 /* Read Receipt Styles */
 .message-timestamp {
-    display: flex; /* Use flexbox to align timestamp and receipts */
+    display: flex;
     align-items: center;
     justify-content: flex-end;
     font-size: 11px;
@@ -92,18 +105,10 @@ body {
     font-weight: bold;
 }
 
-.message-timestamp {
-    font-size: 11px;
-    color: #888;
-    margin-top: 4px;
-    padding-top: 5px;
-    text-align: right;
-}
-
 /* Left/Right Alignment for Messages */
 .message-bubble.received {
-    background-color: #d2d2d2; 
-    color: #212529; 
+    background-color: #d2d2d2;
+    color: #212529;
     float: left;
     border-top-left-radius: 4px;
 }
@@ -115,18 +120,12 @@ body {
 }
 .offline-indicator {
     padding: 10px;
-    background-color: #ffc107; /* A warning yellow color */
+    background-color: #ffc107;
     color: #333;
     text-align: center;
     font-size: 14px;
     font-weight: 500;
 }
-
-/* Adjust timestamp color for the sent bubble */
-/* .message-bubble.sent .message-timestamp {
-    color: whitesmoke;
-    opacity: 0.8;
-} */
 
 /* Date Separator */
 .date-separator {
@@ -179,13 +178,38 @@ body {
     }
 }
 
-
 /* Chat Input Area */
-.chat-input-area {
+.chat-input-area-container {
     display: flex;
-    padding: 22px;
+    flex-direction: column;
     background-color: #f0f0f0;
     border-top: 1px solid #e0e0e0;
+}
+
+#image-preview-container {
+    padding: 10px;
+    display: flex;
+    align-items: center;
+}
+
+#image-preview {
+    max-width: 100px;
+    max-height: 100px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+}
+
+#remove-image-btn {
+    margin-left: 10px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 20px;
+}
+
+.chat-input-area {
+    display: flex;
+    padding: 10px;
 }
 
 .message-input {
@@ -217,31 +241,7 @@ body {
     filter: brightness(1.15);
     transform: scale(1.1);
 }
-/* New Messages Separator */
-.new-messages-separator {
-    width: 100%;
-    text-align: center;
-    border-bottom: 1px solid #ff6347; /* Use a theme color */
-    line-height: 0.1em;
-    margin: 20px 0;
-}
 
-.new-messages-separator span {
-    background: #fff5e6; /* Same as your chat area background */
-    padding: 0 10px;
-    color: #ff6347;
-    font-size: 12px;
-    font-weight: 600;
-}
-.read-receipts {
-    margin-left: 4px;
-    color: white;
-}
-
-.read-receipts.read {
-    color: blue;
-}
-/* Styling for the new attach button */
 .attach-button {
     background: none;
     border: none;
@@ -251,32 +251,6 @@ body {
     color: #555;
 }
 
-/* Styling for images inside message bubbles */
-.message-bubble .message-image {
-    max-width: 100%;
-    border-radius: 12px;
-    margin-top: 5px;
-}
-.chat-image-preview {
-  max-width: 220px;
-  max-height: 220px;
-  border-radius: 8px;
-  display: block;
-  margin-bottom: 6px;
-}
-
-.upload-progress-bar {
-  width: 0%;
-  height: 4px;
-  background: #4caf50;
-  margin: 8px 0;
-  transition: width 0.2s;
-
-.message-image {
-    max-width: 100%;
-    border-radius: 15px; /* Match the bubble's curve */
-    cursor: pointer;
-}}
 /* Responsive Design for Mobile */
 @media (max-width: 600px) {
     body {
