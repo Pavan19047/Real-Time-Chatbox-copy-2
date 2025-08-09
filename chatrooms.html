@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chats</title>
+    <link rel="stylesheet" href="./styles/style.css">
+    <link rel="stylesheet" href="./styles/chatrooms.css">
+</head>
+<body>
+    <div class="chat-container">
+        <header class="chat-header">
+        <h1 class="room-title">Chats</h1>
+        <button id="create-room-btn" class="create-room-button">+</button>
+    </header>
+
+        <div class="search-container">
+            <input type="text" id="search-bar" class="search-bar" placeholder="Search chats...">
+        </div>  
+
+        <main id="chatroom-list" class="chatroom-list">
+            <div class="chatroom-item-skeleton"></div>
+            <div class="chatroom-item-skeleton"></div>
+            <div class="chatroom-item-skeleton"></div>
+        </main>
+    </div>
+
+    <script type="module" src="chatrooms.js"></script>
+</body>
+</html>

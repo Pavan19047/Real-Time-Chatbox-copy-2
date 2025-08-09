@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chat Room</title>
+    <link rel="stylesheet" href="./styles/style.css" />
+  </head>
+  <body>
+    <div class="chat-container">
+      <header class="chat-header">
+        <button class="back-button">&larr;</button>
+        <h1 class="room-title">Welcome to QRAllimi Family</h1>
+      </header>
+      <div
+        id="offline-indicator"
+        class="offline-indicator"
+        style="display: none"
+      >
+        <p>You are currently offline. Some messages may not be up to date.</p>
+      </div>
+
+      <main class="chat-area"></main>
+
+      <footer class="chat-input-area">
+        <button
+          id="attach-file-button"
+          class="attach-button"
+          title="Attach Image"
+        >
+          📎
+        </button>
+        <input
+          type="file"
+          id="image-upload-input"
+          accept="image/*"
+          style="display: none"
+        />
+        <input
+          type="text"
+          class="message-input"
+          placeholder="Type a message..."
+          maxlength="300"
+        />
+        <button class="send-button">Send</button>
+        <div
+          id="image-preview-container"
+          style="display: none; margin-top: 8px"
+        >
+          <img
+            id="image-preview"
+            src=""
+            alt="Image preview"
+            style="
+              max-width: 120px;
+              max-height: 120px;
+              border: 1px solid #ccc;
+              border-radius: 8px;
+            "
+          />
+          <button
+            id="remove-image-btn"
+            title="Remove image"
+            style="margin-left: 8px"
+          >
+            ❌
+          </button>
+        </div>
+      </footer>
+    </div>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
